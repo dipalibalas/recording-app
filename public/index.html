@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial scale=1.0"/>  
+        <title>Audio Recording App</title> 
+        <style>
+          .main{
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+          }
+        </style>      
+    </head>
+    <body>
+        <div class="main">
+        <h2>Recorder App</h2>
+        <p>
+          <button type="button" id="record">Record</button>
+          <button type="button" id="stopRecord" disabled>Stop</button>
+        </p>
+          <h3 id="time"></h3>
+        <p>
+          <audio id=recordedAudio></audio>        
+        </p>
+      </div>
+    </body>
+    <script type="module">     
+        
+        navigator.mediaDevices.getUserMedia({audio:true})
+        .then(stream => {handlerFunction(stream)})
+        let rec, intervalValue ;
+        let audioChunks = [];
+        let element = document.getElementById("time");
+        let second = 0;
+    
+        function handlerFunction(stream) {
+          rec = new MediaRecorder(stream);
+          rec.ondataavailable = e => {
+            audioChunks.push(e.data);
+            if (rec.state == "inactive"){
+              let blob = new Blob(audioChunks,{type:'audio/wav'});
+              recordedAudio.src = URL.createObjectURL(blob);
+              recordedAudio.controls=true;
+              recordedAudio.autoplay=true;
+              sendData(blob)
+              }
+            }
+          }
+        
+        async function sendData(data) {
+          console.log("send data called...",data)
+          let form = new FormData();
+          form.append('file',data);
+        
+          let url = `/senddata`;
+          let response = await 
+          fetch(url, {
+            method: 'POST', // or 'PUT'
+            mode: 'no-cors', // no-cors, *cors, same-origin
+            cache: 'no-cache',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            body: form,
+          })
+     
+        }
+         
+        function showTime(){
+          second++;
+          element.innerHTML = (second > 9 ? "" + second : "0" + second) + ":00 seconds";
+        }
+
+        function clearIntervalTime(){
+          clearInterval(intervalValue);
+        }
+
+        record.onclick = e => {
+           console.log("recording started..")
+                record.disabled = true;
+                record.style.backgroundColor = "blue"
+                stopRecord.disabled=false;
+                rec.start();
+                intervalValue = setInterval(showTime, 1000);
+                if(rec.state == "recording")
+                {
+                  setTimeout(()=>{
+                  record.disabled = false;
+                  stop.disabled=true;
+                  clearIntervalTime();
+                  record.style.backgroundColor = "red"
+                  rec.stop()},15000)
+                }
+           
+            }
+          stopRecord.onclick = e => {
+            console.log("recording stopped..")
+            record.disabled = false;
+            stop.disabled=true;
+            record.style.backgroundColor = "red"
+            clearIntervalTime();
+            rec.stop();
+            }
+      </script>
+</html>
